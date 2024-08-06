@@ -1,6 +1,9 @@
-print("_____________________________homework06________________________________________________________________")
+print("_____________________________homework07_01________________________________________________________________")
+
 import re
 from collections import UserDict
+from datetime import datetime, timedelta
+from functools import wraps
 
 class Field:
     def __init__(self, value):
@@ -25,13 +28,25 @@ class Phone(Field):
         if not re.fullmatch(r'\d{10}', value):
             raise ValueError("Phone number must be 10 digits")
 
+class Birthday(Field):
+    def __init__(self, value):
+        try:
+            self.value = datetime.strptime(value, "%d.%m.%Y")
+        except ValueError:
+            raise ValueError("Invalid date format. Use DD.MM.YYYY")
+
 class Record:
     def __init__(self, name):
         self.name = Name(name)
         self.phones = []
+        self.birthday = None
 
     def add_phone(self, phone):
         self.phones.append(Phone(phone))
+
+    def add_birthday(self, bday):
+        if self.birthday == None:
+            self.birthday = Birthday(bday)
 
     def remove_phone(self, phone):
         phone_2_remove = self.find_phone(phone)
@@ -55,7 +70,8 @@ class Record:
 
     def __str__(self):
         phone_str = '; '.join(str(phone) for phone in self.phones)
-        return f"Contact name: {self.name}, phones: {phone_str}"
+        birthday_str = f", birthday: {self.birthday.value.strftime('%d.%m.%Y')}" if self.birthday else ""
+        return f"Contact name: {self.name}, phones: {phone_str}{birthday_str}"
 
 class AddressBook(UserDict):
 
@@ -80,6 +96,41 @@ class AddressBook(UserDict):
         else:
             print(f"Can't remove {name}, cuz contact doesn't exit in contact book")
 
+     # function that determines when to greet the users
+def get_upcoming_birthdays(address_book):
+    today = datetime.now().date()
+    upcoming_birthdays = []
+
+    for record in address_book.values():
+        user_name = record.name.value
+        user_birthday = record.birthday
+
+        # convert users birthday date form string to date
+        # user_birthday_date = datetime.strptime(user_birthday, ("%Y.%m.%d")).date()
+        if user_birthday:
+            user_birthday_date =user_birthday.value.date()
+
+            # check who have birthday for today and 7 day after
+            for i in range(8):
+                the_date = today + timedelta(days=(i))
+
+                if user_birthday_date.day == the_date.day and user_birthday_date.month == the_date.month:
+                    # check if bithday on weekday
+                    if the_date.weekday() in [5, 6]:
+                        the_date += timedelta(days=(7 - the_date.weekday()))
+                        print(the_date)
+                    
+                    congratulation_date = the_date.strftime("%d.%m.%Y")
+
+                    # upcoming_birthdays.append({"name": user_name, "congratulation_date": congratulation_date})
+                    upcoming_birthdays.append([user_name, congratulation_date])
+                    break
+    print(upcoming_birthdays)
+    return upcoming_birthdays
+
+
+
+# _____________________________________________________________________________________________
 
 def show_all_records(address_book):
     print("\n" + "-" * 40 + "ALL RECORDS IN ADDRESS BOOK" + "-" * 40)
@@ -91,11 +142,13 @@ print("\n" + "-" * 40 + "ADD RECORDS TO ADDRESS BOOK" + "-" * 40)
 john_record = Record("John")
 john_record.add_phone("1234567890")
 john_record.add_phone("9999999999")
+john_record.add_birthday("09.08.1945")
 
 book.add_record(john_record)
 
 jane_record = Record("Jane")
 jane_record.add_phone("9876543210")
+jane_record.add_birthday("09.08.2002")
 
 book.add_record(jane_record)
 
@@ -127,3 +180,8 @@ book.delete_record_by_name("Jane")
 book.delete_record_by_name("Trump")
 
 show_all_records(book)
+
+print("\n" + "-" * 40 + "CONGRAT USERS FORM ADDRESS BOOK" + "-" * 40)
+upcoming_birthdays = get_upcoming_birthdays(book)
+
+print("List of upcoming birthdays of this week:", upcoming_birthdays)
